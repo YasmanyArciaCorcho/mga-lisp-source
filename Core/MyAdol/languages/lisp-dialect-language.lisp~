@@ -1,0 +1,32 @@
+;;;;;{{{ Documentation
+;;;;{{{ History, TODO, and the like
+;;;{{{ History
+;;;
+;;;   2012-03-24
+;;;     - Wrote the generate-code for the binary-operators, using
+;;;       the macro generate-code-for-binary-operators.
+;;;
+;;;   2012-04-16
+;;;     - Added lisp-dialect-language
+;;;
+;;;
+;;;}}}
+;;;;}}}
+;;;;;}}}
+
+(in-package :adol*)
+
+;;;{{{ Language definition
+(defclass lisp-dialect-language (basic-language)
+  ()
+  (:documentation "A language with prefix notation."))
+;;;}}}
+
+;;;{{{ Code generation
+;;;{{{ generate-code-for-binary-operators
+(generate-code-for-binary-operators lisp-dialect-language
+                                    "(~a ~a ~a)"
+                                    (operator left right))
+;;;}}}
+
+;;;}}}

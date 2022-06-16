@@ -1,0 +1,12 @@
+(load "mga")
+(defnode csharp () ())
+(defnode sum-node () (a b))
+(setf c (csharp))
+(defgeneric escribe (node lang stream))
+(defmethod escribe (number lang stream)())
+(defmethod escribe ((node sum-node) (lang csharp) stream)
+  (print 2)
+  (escribe (b node) lang stream))
+
+(defmethod escribe :before((node sum-node) (lang csharp) stream)
+  (print "hola"))

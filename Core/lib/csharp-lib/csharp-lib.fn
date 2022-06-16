@@ -1,0 +1,36 @@
+;;; Para indentar toda una sexp, te paras en el paréntesis que la abre
+;;; y presionas C-M-q, o llamas a la función indent-sexp.
+
+;;-->csharp-language: clase que representa el lenguaje csharp.
+(defnode csharp-language (common-c-language)
+  ()
+  (:documentation  "csharp-language: clase que representa el lenguaje csharp."))
+
+;;--instancia por defecto de csharp-language.
+(class-instance  csharp csharp-language)
+
+;;declaracion de una variable en csharp.
+;;la difenercia es que se define el tipo.
+(defnode  variable-declaration-csharp (variable-declaration)
+  (type-declaration)
+  (:documentation  "la difenercia es que se define el tipo.hereda de variable-declaration de core-lib"))
+
+;;sobrecarga de operadores en csharp.
+;;-->method-type-class: las sobrecargas de operadores en csharp deben devolver un valor,
+;;method-type-class son metodos que devueven valores.
+;;op-overload ver en coreLib.
+;;-->return-type: tipo de retorno de la sobrecarga.
+;;-->parameters: parametros para la sobrecarga en csharp,.....................Todo:ver porqe siempre es un tipo,definir mejor
+;;code-->el codigo para la sobrecarga.
+(defnode op-overload-csharp  (method-type-class op-overload)
+  ()
+  (:documentation "hereda de method-type-class y op-overload en core-lib.Para definir una sobrecarga en scharp se define una nueva funcion"))
+
+;;Definicion de las propiedades en csharp.
+;;-->name:nombre de la propiedad.
+;;-->type:tipo de la propiedad.
+(defnode property-csharp  (property-lang)
+  (type-property)
+  (:documentation "Definicion de las propiedades en csharp.
+name:nombre de la propiedad.type:tipo de la propiedad."))
+

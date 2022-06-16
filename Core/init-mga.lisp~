@@ -1,0 +1,6 @@
+(load "D:/Development/GeneratorMultiLanguage/Core/code-generator-utils.lisp")
+(load "D:/Development/GeneratorMultiLanguage/Core/macro-core.lisp")
+(load "D:/Development/GeneratorMultiLanguage/Core/mga.lisp")
+(load "D:/Development/GeneratorMultiLanguage/Core/lib/base-class-lib/defgeneric-code-generator.lisp")
+(load "D:/Development/GeneratorMultiLanguage/Core/mga-syntax-highlighting.lisp")
+(load "D:/Development/GeneratorMultiLanguage/Core/diagram-view.lisp")

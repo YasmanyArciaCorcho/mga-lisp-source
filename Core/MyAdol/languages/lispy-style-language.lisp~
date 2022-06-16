@@ -1,0 +1,32 @@
+;;;;;{{{ Documentation
+;;;;{{{ History, TODO, and the like
+;;;{{{ History
+;;;
+;;    2012-04-27
+;;      - Wrote the generate-code-for-symbols
+;;;
+;;;   2012-04-16
+;;;     - Added lispy-style-language
+;;;  
+;;;}}}
+;;;;}}}
+;;;;;}}}
+
+(in-package :adol*)
+
+;;;{{{ Language definition
+(defclass lispy-style-language ()
+  ()
+  (:documentation "A language with names of funcs and vars in lisp style. Example: adol-star."))
+;;;}}}
+
+;;;{{{ Code generation
+
+(defmethod generate-code ((node symbol)
+                          (language lispy-style-language)
+                          stream indentation)
+  (declare (ignore indentation))
+  (let* ((symbol-string (string-downcase (symbol-name node))))    
+    (format stream "~a" symbol-string)))
+
+;;;}}}

@@ -1,0 +1,254 @@
+;;;{{{ Documentation
+;;;
+;;; This file contains the definition and code generation routines for 
+;;; the basic-language language.
+;;; 
+;;;;{{{ History, TODO, and the like
+;;;{{{ History
+;;;
+;;;   2012-03-25
+;;;     - wrote the code generation for the nil node.
+;;;     
+;;;   2012-03-24
+;;;     - Wrote the macro generate-code-for-binary-operators
+;;;
+;;;   2012-03-24 (BASIC-CLASS explanation and justification)
+;;;     - Wrote the basic-language to ease the code generation for the
+;;;       binary operators.  The idea is to have a basic-language from
+;;;       which can inherit almost every language.  In this basic language
+;;;       there are the arithmetic operators.
+;;;
+;;;       The language is created with a macro for several reasons:
+;;;         - the first one is to make it easier to add or remove new slots
+;;;           to that class
+;;;         - The slots are stored in a separate variable
+;;;           *basic-language-binary-operators*.  Any other binary operator
+;;;           can be added to this list and they are automatically added to
+;;;           the class, and the code-generation routines for them can be
+;;;           created also automatically.  (That is done in the file
+;;;           adolstar-code-generation-basic-languagge)
+;;;
+;;;       The basic-language class has slots with the symbols of the
+;;;       arithmetic operators, and the name of these operators.  Any
+;;;       language inheriting from this class has already this slots
+;;;       defined.  If in that language, some of the operators use a
+;;;       different symbol than the defined in the basic-class the user
+;;;       only has to redefine the initform for the new class.
+;;;
+;;;       For instance, in Common Lisp, the symbols used for
+;;;       asssignments, testing equality and not equality are
+;;;       different, from the ones defined in the basic-language
+;;;       class.  To be able to use all the advantages of the
+;;;       basic-language class but using the right symbols, the
+;;;       definition of the common-lisp language is the following:
+;;;
+;;;         (defclass common-lisp (lisp-dialect-language
+;;;                                indentable-language)
+;;;           ((assignment-symbol :initform "setf")
+;;;            (equal-symbol      :initform "=")
+;;;            (not-equal-symbol  :initform "/=")))
+;;;
+;;;       After this is done, the instances of the common-lisp class,
+;;;       can benefit from the automatic code-generation for the basic
+;;;       language.
+;;;
+;;;}}}
+;;;;}}}
+
+;;;}}}
+
+(in-package :adol*)
+
+;;;{{{ Language Definition
+
+;;{{{ make-slots-for-basic-language
+(defun make-slots-for-basic-language (slot-list)
+    ;;{{{ Documentation
+    "Creates a lis of slots for the basic language with the symbols of each
+binary operator.
+     Syntax:
+       (make-slot-for-basic-language slot-list)
+      slot-list is a list where each element is of the form:
+                (node-prefix symbol-used operation-name).
+     Example:
+       (make-slot-for-basic-language '((plus \"+\" \"addition\") 
+                                      (minus \"-\" \"substraction\")))
+      returns the list
+        '((plus-symbol :accessor plus-symbol :initarg :plus-symbol
+                       :initform \"+\"
+                       :documentation \"The symbol used for the addition.\")
+          (minus-symbol :accessor minus-symbol :initarg :minus-symbol
+                        :initform \"-\"
+                        :documentation \"The symbol used for the substraction.\"))"
+    ;;}}}
+  (loop for (prefix symbol name) in slot-list
+        for node-name = (concat-as-symbols prefix "-symbol")
+        for initform = (format nil "~a" symbol)
+        for initarg = (concat-as-symbols ":" node-name)
+        for docstring = (format nil "The symbol used for the ~a." name)
+        collecting `(,node-name
+                      :accessor ,node-name :initarg ,initarg
+                      :initform ,initform
+                      :documentation ,docstring)))
+;;}}}
+
+;;{{{ macro define-basic-language
+(defmacro define-basic-language (operators-list)
+  ;;{{{ Documentation
+  "Creates the basic-language class with all its operators.
+   Syntax:
+     (define-basic-language operators-list)
+    operators-list is a list where each element is of the form:
+                (node-prefix symbol-used operation-name).
+     Example:
+       (define-basic-language ((plus \"+\" \"addition\") 
+                               (minus \"-\" \"substraction\")))
+      expands into
+        (defclass basic-language ()
+          ((plus-symbol :accessor plus-symbol :initarg :plus-symbol
+                        :initform \"+\"
+                        :documentation \"The symbol used for the addition.\")
+           (minus-symbol :accessor minus-symbol :initarg :minus-symbol
+                         :initform \"-\"
+                         :documentation \"The symbol used for the addition.\"))
+          (:documentation \"The basic class for languages with arithmetic opeators.\"))"
+  ;;}}}
+  `(defclass basic-language ()
+     ,(make-slots-for-basic-language (if (symbolp operators-list)
+                                         (symbol-value operators-list)
+                                         operators-list))
+     (:documentation "The basic class for languages with arithmetic operators.")))
+;;}}}
+
+;;{{{ list with the slots for basic-language
+(defvar *basic-language-binary-operators*
+  '((sum  + "addition")
+    (minus - "substraction")
+    (multiplication * "multiplication")
+    (division / "division")
+    (assignment = "assignment")
+    (less-than < "less than comparison")
+    (less-than-equal <= "less than or equal to")
+    (great-than > "greater than comparison")
+    (great-than-equal >= "greater than or equal to")
+    (equal == "equality comparison")
+    (not-equal != "inequality comparison"))
+  "A list with the operators used by the basic language.")
+;;}}}
+(define-basic-language *basic-language-binary-operators*)
+;;;}}}
+
+;;;{{{ Code Generation
+;;;{{{ macro generate-code-for-binary-operators
+(defmacro generate-code-for-binary-operators (language format-string list-with-order)
+    ;;;{{{ Documentation
+    "Generates the code for all the binary operators in the list
+*basic-language-operators*.
+     Syntax:
+       (generate-code-for-binary-operators language
+                                           format-string
+                                           list-with-order)
+      language      is the name of the language class.
+      format-string is the format string to be used.
+      list-with-order is a list with the symbols in the order that should appear
+                      in the format-string.
+                      The list must have three symbols:
+                      operator left and right
+                      The order in which these symbols appear determines the
+                      order of the operator, and the left-hand and right-hand
+                      arguments.
+                      For example, for a language with infix notation the
+                      order should be
+                           (left operator right),
+                      For a language with prefix notation the order should be
+                           (operator left right).
+     Example:
+       (generate-code-for-binary-operators lisp 
+                                           \"(~a ~a ~a)\"
+                                           (operator left-hand right-hand))
+       This example expands into the code-generators for lisp-dialects."
+    ;;;}}}
+    ;;{{{ create the defmethods-definitions
+    (let* ((defmethods-definitions
+            (loop for (op symbol description) in *basic-language-binary-operators*
+                  with left = `(generate-code (left-hand node)
+                                              language
+                                              nil
+                                              0)
+                  with right = `(generate-code (right-hand node)
+                                               language
+                                               nil
+                                               0)
+                  for node-name = (concat-as-symbols op "-node")
+                  for node-symbol = (concat-as-symbols op "-symbol")
+                  for operator = `(,node-symbol language)
+                  for actual-order = (loop for elt in list-with-order
+                                           collecting (cond
+                                                        ((eq elt 'operator) operator)
+                                                        ((eq elt 'left) left)
+                                                        ((eq elt 'right) right)))
+                  for docstring = (format nil "Generate infix code for node ~a in language ~a."
+                                          node-name
+                                          language)
+                  collecting `(defmethod generate-code ((node ,node-name)
+                                                        (language ,language)
+                                                        stream
+                                                        indentation)
+                                ,docstring
+                                (format stream ,format-string ,@actual-order)))))
+     ;;}}}
+     `(progn
+        ,@defmethods-definitions)))
+    
+;;;}}}
+
+;;;{{{ code-generation for nil
+(defmethod generate-code ((node (eql nil))
+                          (language basic-language)
+                          stream
+                          indentation)
+  (declare (ignore indentation))
+  (format stream ""))
+;;;}}}
+
+
+;;;{{{ process-list-as
+
+;;;;{{{ classes
+;;;{{{ list-of-instructions
+(defclass list-of-instructions ()
+  ()
+  (:documentation "A class that represents a list of instructions."))
+;;;}}}
+
+;;;{{{ list-of-function-args
+(defclass list-of-function-args () ()
+  (:documentation "A class that represents a list of arguments for a function."))
+;;;}}}
+
+;;;{{{ list-of-method-args
+(defclass list-of-method-args (list-of-function-args) ()
+  (:documentation "A class that represents a list of arguments for a method definition."))
+;;;}}}
+
+;;;{{{ instances
+(defparameter list-of-instructions (make-instance 'list-of-instructions))
+(defparameter list-of-function-args (make-instance 'list-of-function-args))
+(defparameter list-of-method-args (make-instance 'list-of-method-args))
+;;;}}}
+;;;;}}}
+
+;;;{{{ defgeneric process-list-as
+(defgeneric process-list-as (type-of-list language list indentantion)
+  (:documentation "Returns a string with the result of processing a list as the selected type of list."))
+;;;}}}
+
+;;;{{{ defmethod for other than lists
+(defmethod process-list-as (type-of-list language (list t) indentation)
+  (declare (ignore type-of-list language indentation))
+  (error "Generic function process-list-as should be called on lists, not on ~a."
+         (type-of list)))
+;;;}}}
+
+;;;}}}
+;;;}}}

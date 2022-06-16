@@ -1,0 +1,153 @@
+* implementacion 
+Estos macros son para poder crear el nombre del simbolo que quiera. Aqui se implementan algunos hacen falta para
+encapsular el codigo que se repite en en macro principal.
+Todavia se puede mejorar, solo que cuando lo hice no me salio mejor, hay mucho codigo que se repite todavia.
+
+#+BEGIN_SRC lisp +n -r :results output
+  (defmacro concatenate-symbol (symbol1 symbol2)
+    `(read-from-string (concatenate 'string (symbol-name ,symbol1) (symbol-name ,symbol2))))
+
+  (defmacro concatenate-string-symbol2 (string symbol1 symbol2)
+    `(read-from-string (concatenate 'string ,string (symbol-name ,symbol1) (symbol-name ,symbol2))))
+
+  (defmacro concatenate-string-symbol (string symbol)
+    `(read-from-string (concatenate 'string ,string (symbol-name ,symbol))))
+
+  (defun convert-to-list-string (list-symbol)
+    (loop for symbol in list-symbol
+       collecting (concatenate 'string "\""(symbol-name symbol) "\"")))
+
+; La funcion ctr-face hace  construye la variable con la palabras clave y el rexexp de una opcion para colorear.
+  (defun ctr-face (mode-name language optional-face)
+    `( ,(format nil ";Initialize ~a-~a" mode-name optional-face)
+        (setq ,(concatenate-string-symbol (format nil "~a-" mode-name) optional-face) ',(convert-to-list-string language))
+        (setq ,(concatenate-string-symbol2 (format nil "~a-"  mode-name) optional-face  '-regexp) (regexp-opt ,(concatenate-string-symbol (format nil "~a-" mode-name) optional-face) 'words))))
+
+; cuando se termina de definir el modo como Elisp siempre esta corriendo por detras de emacs, hace falta limpiar la memoria porque se puede poner lento el editor emacs.
+  (defun clear-memory (mode-name optional-face)
+    `( ,(format nil  ";Cleaning memory of: ~a-~a" mode-name optional-face)
+        (setq ,(concatenate-string-symbol (format nil "~a-" mode-name) optional-face) nil)
+        (setq ,(concatenate-string-symbol2 (format nil "~a-"  mode-name) optional-face  '-regexp) nil)))
+
+; el primer parametro es el nombre del modo que se quiere crear.
+;el segundo es una lista con las palabras clave que posibilitan colorear las distintas opciones.
+;el tercero es el nombre del fichero a donde se queire escribir.Por defecto se genera un fichero con el "nombre del modo - mode.el"
+  (defmacro language-syntax-highlighting (mode-name 
+                                          (&key
+                                           keywords
+                                           builtin-face
+                                           comment-delimiter-face 
+                                           comment-face
+                                           constant-face
+                                           doc-face
+                                            function-name-face
+                                            negation-char-face
+                                            prepocessor-face
+                                            regexp-grouping-backslash 
+                                            regexp-grouping-construct 
+                                            string-face
+                                            type-face
+                                            variable-name-face
+                                            warning-face)
+                                          &optional (file ""))
+    (prog2 (if (equal file "")
+               (setf file (format nil "~a-mode.el" (string-downcase(string mode-name)))))
+        (with-open-file (stream file :direction :output)
+          (let* ((ctr-value  (append
+                              (ctr-face mode-name keywords 'keywords)
+                              (ctr-face mode-name builtin-face 'builtin)
+                              (ctr-face mode-name comment-delimiter-face 'comment-delimiter) 
+                              (ctr-face mode-name comment-face 'comment)
+                              (ctr-face mode-name constant-face  'constant)
+                              (ctr-face mode-name doc-face 'doc-face)
+                              (ctr-face mode-name function-name-face 'function-name)
+                              (ctr-face mode-name negation-char-face 'negation-char)
+                              (ctr-face mode-name prepocessor-face 'prepocessor)
+                              (ctr-face mode-name regexp-grouping-backslash 'regexp-grouping-backslash)
+                              (ctr-face mode-name regexp-grouping-construct 'regexp-grouping-construct)
+                              (ctr-face mode-name string-face 'string)
+                              (ctr-face mode-name type-face 'type)
+                              (ctr-face mode-name variable-name-face 'variable-name)
+                              (ctr-face mode-name warning-face 'warning)))
+                 (clear (append
+                         (clear-memory mode-name  'keywords)
+                         (clear-memory mode-name  'builtin)
+                         (clear-memory mode-name  'comment-delimiter) 
+                         (clear-memory mode-name  'comment)
+                         (clear-memory mode-name  'constant)
+                         (clear-memory mode-name  'doc-face)
+                         (clear-memory mode-name  'function-name)
+                         (clear-memory mode-name  'negation-char)
+                         (clear-memory mode-name  'prepocessor)
+                         (clear-memory mode-name  'regexp-grouping-backslash)
+                         (clear-memory mode-name  'regexp-grouping-construct)
+                         (clear-memory mode-name  'string)
+                         (clear-memory mode-name  'type)
+                         (clear-memory mode-name  'variable-name)
+                         (clear-memory mode-name  'warning)))
+                 (result `(
+                           (setq ,(concatenate-symbol mode-name '-mode-hook) nil)
+                           
+                           (setq ,(concatenate-symbol mode-name '-default-tab-width) 3)
+                           
+                           (add-to-list 'auto-mode-alist  '(,(format nil "\"\\\\.~a\\\\'\"" mode-name) . ,(concatenate-symbol mode-name '-mode)))
+                           
+                           ,@ctr-value
+                           
+                           ,(format nil ";valores por defecto al font-look de ~a-mode" mode-name)
+                           (setq ,(concatenate-symbol mode-name '-font-lock-keywords)
+                                 (list (cons ,(concatenate-symbol mode-name '-keywords-regexp)  `font-lock-keyword-face)
+                                       (cons ,(concatenate-symbol mode-name '-builtin-regexp)  `font-lock-builtin-face)
+                                       (cons ,(concatenate-symbol mode-name '-comment-delimiter-regexp)  `font-lock-comment-delimiter-face)
+                                       (cons ,(concatenate-symbol mode-name '-comment-regexp)  `font-lock-comment-face)
+                                       (cons ,(concatenate-symbol mode-name '-constant-regexp)  `font-lock-constant-face)
+                                       (cons ,(concatenate-symbol mode-name '-doc-face-regexp)  `font-lock-doc-face)
+                                       (cons ,(concatenate-symbol mode-name '-function-name-regexp)  `font-lock-function-name-face)
+                                       (cons ,(concatenate-symbol mode-name '-negation-char-regexp)  `font-lock-negation-char-face)
+                                       (cons ,(concatenate-symbol mode-name '-prepocessor-regexp)  `font-lock-preprocessor-face)
+                                       (cons ,(concatenate-symbol mode-name '-regexp-grouping-backslash-regexp)  `font-lock-regexp-grouping-backslash)
+                                       (cons ,(concatenate-symbol mode-name '-regexp-grouping-construct-regexp)  `font-lock-regexp-grouping-construct)
+                                       (cons ,(concatenate-symbol mode-name '-string-regexp)  `font-lock-string-face)
+                                       (cons ,(concatenate-symbol mode-name '-type-regexp)  `font-lock-type-face)
+                                       (cons ,(concatenate-symbol mode-name '-variable-name-regexp)  `font-lock-variable-name-face)
+                                       (cons ,(concatenate-symbol mode-name '-warning-regexp)  `font-lock-warning-face)))
+                           ";derived from  lisp-mode"
+                           (define-derived-mode ,(concatenate-symbol mode-name '-mode) lisp-mode
+                             (run-hooks ',(concatenate-symbol mode-name '-mode-hook))
+                             (setq font-lock-defaults '((,(concatenate-symbol mode-name '-font-lock-keywords)))))
+                           
+                           ,@clear
+                           
+                           (provide ',(concatenate-symbol mode-name '-mode)))
+                   ))(format stream "~{~a~%~}"  (mapcar (lambda (x) (string-downcase(format nil "~a" x))) result))))
+      ))
+#+END_SRC
+
+#+RESULTS:
+
+* Ejemplo de llamado al macro
+aqui se rellena en cada lista las palabras clave que deseen ser coloriadas con la opcion.
+Como los keys coinciden con las distintas opciones que brinda emacs
+#+BEGIN_SRC lisp +n -r 
+  (language-syntax-highlighting a 
+                                (:keywords (clave1 defun persona) 
+                                           :builtin-face (builtin otras-palabras) 
+                                           :comment-delimiter-face(delimiter) 
+                                           :comment-face (comm) 
+                                           :constant-face (const) 
+                                           :doc-face (doc) 
+                                           :function-name-face (funtion-name) 
+                                           :negation-char-face (negation) 
+                                           :prepocessor-face (prepo) 
+                                           :regexp-grouping-backslash (reg1) 
+                                           :regexp-grouping-construct (construct) 
+                                           :string-face (string) 
+                                           :variable-name-face (variable-name) 
+                                           :warning-face (string) 
+                                           :variable-name-face (variable-name) 
+                                           :type-face (defclass) 
+                                           :warning-face (warning)))
+#+END_SRC 
+
+#+RESULTS:
+

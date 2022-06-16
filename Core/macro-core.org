@@ -1,0 +1,284 @@
+* Carga de archivos viejos.
+   Temporalmente se carga macro-core.lisp para poder mostrar ejemplos de salida.
+  #+BEGIN_SRC emacs-lisp
+    (load "D:/Development/GeneratorMultiLanguage/Core/macro-core.lisp")
+  #+END_SRC  
+  #+RESULTS:
+  : t
+* Libreria macro-core
+  En esta libreria se encuentra la implementacion de los macros que posibilitan
+  la definicion de un lenguaje para automatizar el proceso de creacion de un DSL.\\
+  El orden en que se referencian las funciones es solamente para evitar warning cuando
+  se evalue el modulo macro-core.lisp
+** Estructura de clases almacenadas.
+   La definicion de las clases se encuentrar ,por ahora, en un diccionario estatico
+   el cual almacena su nombre,sus clases padres y los nuevos slots que
+   define.\\
+   Por defecto el diccionario es pdict: diccionario de propiedades.\\
+   En el siguiente ejemplo mostramos el resultado de almacenar varias definiciones.
+   #+BEGIN_EXAMPLE
+     ;;clase persona con 2 slots nombre y edad.
+     ;;clase estudiante, hereda de perona y tiene el nombre de una escuela.
+     ((estudiante (persona) escuela) (persona () nombre edad))
+     ;;deportista, hereda de persona y participa en un deporte.
+     ((deportista (persona) deporte) (estudiante (persona) escuela) (persona () nombre edad))
+     ;;estudiante_deportista,hereda de estudiante y deportista.
+     ((estudiante_deportista (deportista estudiante)) (deportista (persona) deporte) (estudiante (persona) escuela) (persona () nombre edad))
+   #+END_EXAMPLE
+** Funciones y Macros auxiliares.
+*** macro mac
+    Equivalente a (macroexpand -1 e)    
+**** Implementacion y ejemplos de salida
+***** Implementacion
+     #+BEGIN_SRC lisp +n -r :exports code :result output :tangle micro-core-org.lisp
+       (defmacro mac(expr)
+         `(macroexpand-1 ',expr))
+     #+END_SRC
+      
+     #+RESULTS:
+     : MAC
+***** Ejemplo
+     #+BEGIN_EXAMPLE
+      (mac expr)
+     #+END_EXAMPLE
+*** class-instance
+    Intancia una clase.
+    Solo se usa para instanciar clases que no tengan slots en este caso lenguajes.
+    Modificar para instanciarla con slots tambien.
+**** Parametros 
+     :name-instance: nombre de la instancia.
+     :class-name: nombre del tipo de la clase.
+**** Implementacion y ejemplos de salida
+***** Implementacion
+      #+BEGIN_SRC lisp -n -r :exports code :result output :tangle micro-core-org.lisp
+        (defmacro class-instance (name-instance class-name)
+          `(defparameter ,name-instance (make-instance ',class-name)))
+      #+END_SRC
+
+      #+RESULTS:
+      : CLASS-INSTANCE
+
+***** Ejemplo
+     #+BEGIN_EXAMPLE
+     (defclass csharp-class () ())
+     (class-instance test-instance csharp-class)
+     #+END_EXAMPLE
+*** fill-pdict
+    Rellena el dictionario de propiedades con el protocolo
+    implementado
+**** Implementacion    
+    #+BEGIN_SRC lisp -n -r :exports code :result output :tangle micro-core-org.lisp
+      (defun fill-pdict (property-name dict)
+        (let ((aux (cdr dict)))
+          (prog2
+          (setf dict (append (first dict) property-name))
+          (setf dict (append (list dict) aux)))))
+    #+END_SRC
+
+    #+RESULTS:
+    : FILL-PDICT
+
+     Esta funcion es privada, solo debe usarse en este modulo.
+*** insert-class-data
+    Inserta en el diccionario de propiedades(standar:pdict) una nueva definicion. 
+**** Parametros 
+     :dict :    diccionario a insertarle la nueva definicion.
+     :class-name: nombre de la clase a insertar.
+     :inherit:  clases padres de la nueva definicion.
+     :slots:    slots de la propia definicion de la clase.
+**** Implementacion
+       #+BEGIN_SRC lisp -n -r :exports code :result output :tangle micro-core-org.lisp
+         (defun insert-class-data(dict class-name inherit &rest slots)
+           (if (not (eq dict nil))
+               (loop for (name) in dict
+                  doing (if(eq name class-name)
+                           (return-from insert-class-data dict))))
+           (push (list class-name inherit) dict)
+           (loop for property-name in slots
+              doing (setf dict (fill-pdict property-name dict)))
+           dict)
+       #+END_SRC
+
+       #+RESULTS:
+       : INSERT-CLASS-DATA
+
+*** remove-class-data
+     Elimina la definicion de un tipo del diccionario.
+**** Implementacion                                                 :revisar_implementacion:
+      #+BEGIN_SRC lisp -n -r :exports code :result output :tangle micro-core-org.lisp
+        (defun remove-class-data(class-name dict)
+          (loop for  element in dict
+             doing (if(eq (car element) class-name)
+                      (setf dict (remove element dict))))
+          dict)
+      #+END_SRC
+
+      #+RESULTS:
+      : REMOVE-CLASS-DATA
+
+*** make-keyword
+    Convierte de string a simbolo.\\
+    Util para el trabajo en los macros definidos en este modulo
+**** Implementacion y Ejemplo
+***** Implementacion
+    #+BEGIN_SRC lisp -n -r :exports code :result output :tangle micro-core-org.lisp
+      (defun make-keyword (string symbol)
+        (read-from-string (format nil string symbol)))
+    #+END_SRC
+
+    #+RESULTS:
+    : MAKE-KEYWORD
+
+***** Ejemplo 
+    #+BEGIN_EXAMPLE
+      (make-keywork "funtion_testing" 'Test)
+       Salida: FUNTION_TESTING
+               15
+    #+END_EXAMPLE
+*** get-data-from-dictionary
+    Retorna toda la informacion de la definicion de una clase.
+**** Parametros
+      :class-name: nombre de la clase a recuperar sus datos.
+      :dictionary: diccionario donde se debe buscar.
+**** Implementacion
+      #+BEGIN_SRC lisp -n -r :exports code :result output :tangle micro-core-org.lisp
+        (defun get-data-from-dictionary(class-name dictionary)
+          (assoc class-name dictionary))
+      #+END_SRC
+
+      #+RESULTS:
+      : GET-DATA-FROM-DICTIONARY
+
+*** get-slots-from-class
+      Retorna los slots de una clase encontrados en el diccionario de propiedades
+     con el protocolo especificado.
+**** Implementacion
+      #+BEGIN_SRC lisp -n -r :exports code :result output :tangle micro-core-org.lisp
+        (defun get-slots-from-class (class-name dictionary)
+          (let* ((result(cddr (Get-data-from-dictionary class-name dictionary))))
+            (mapcan #'(lambda (x) (if (eq x nil) nil (list x))) result)))
+      #+END_SRC
+
+      #+RESULTS:
+      : GET-SLOTS-FROM-CLASS
+
+     Esta funcion solo retorna los slots que la clase define, no retorna los slots heredados.
+*** flatten-list
+    Implementacion del problema clasico de aplanar una lista.
+**** Implementacion
+    #+BEGIN_SRC lisp -n -r :exports code :result output :tangle micro-core-org.lisp
+      (defun flatten-list (list)
+        (let* (result)
+          (loop for e in list
+             doing (if (and (atom e) (not (eq e nil)))
+                       ;;(pushnew e result :test #'equal) cambio porque debe insertarse en orden
+                       (setf result (append result (list e)))
+                       (setf result (append result (flatten-list e)))))
+          result))
+    #+END_SRC
+
+    #+RESULTS:
+    : FLATTEN-LIST
+
+*** TODO get-all-slots-from-class                          :arreglar_funcion:
+     Esta funcion es similar a "get-data-from-dictionary",con la unica diferencia
+    que si retorna la lista con todos los slots de la clase, heredados tambien.
+***** Implementacion
+       #+BEGIN_SRC lisp -n -r :exports code :result output :tangle micro-core-org.lisp
+         (defun get-all-slots-from-class (class-name dictionary)
+           (let* ((result (gasfc class-name dictionary)))
+             (if (equal result '(nil))
+                 (setf result nil))
+             result))
+       #+END_SRC
+
+       #+RESULTS:
+       : GET-ALL-SLOTS-FROM-CLASS
+
+***** Complementos
+      La funcion gasfc no sera descrita porque una tarea es fundirlas en una sola funcion.
+      Facilmenete de hacer.
+****** gasfc
+******* Implementacion
+       #+BEGIN_SRC lisp -n -r :exports code :result output :tangle micro-core-org.lisp
+         (defun gasfc(class-name dictionary)
+           (let ((inherit (second (Get-data-from-dictionary class-name dictionary))))
+             (flatten-list (append
+                            (loop for inherit-act in inherit
+                               collecting(Get-All-Slots-From-Class inherit-act dictionary))
+                            (get-slots-from-class class-name dictionary)))))
+       #+END_SRC
+
+       #+RESULTS:
+       : GASFC
+
+** Macro base definidor de nodo
+*** create-class-data
+    Macro para crear la definicion completa de una clase.
+**** Parametros
+      :class-name: nombre de la clase a generar codigo.    .
+      :documentation: documentacion de la clase.
+      :inherit: lista con los nombre de las clases padres.
+      :ctr-funtion: funcion o macro para usarse cuando se desee instanciar la clase definida.
+      :string-obj: string para la creacion del print-object de la clase.
+      :new-slots: los slots intrinsecos de la clase. Sin los heredados.
+      :all-slots: todos los slots de la clase.Con los heredados.
+**** Implementacion y Ejemplo
+***** Implementacion
+      1.Definicion de la clase con sus slots y documentacion. 
+      2.Definicion de la funcion contructora de la clase. 
+      3.Definicion del print-object.
+      #+BEGIN_SRC lisp -n -r :exports code :result output :tangle micro-core-org.lisp
+        (defmacro create-class-data (class-name documentation inherit ctr-funtion  string-obj new-slots  all-slots)
+          `(progn
+           ;;;Definiendo clase.
+             (defclass ,class-name
+                 ,inherit
+               ,(loop for property-name in new-slots
+                   collecting `(,property-name :accessor ,property-name :initarg ,(make-keyword ":~a" property-name)))
+               (:documentation ,documentation))
+           ;;;Definiendo funcion constructora.
+             ,ctr-funtion
+            ;;;Print-Object de la clase definida.
+           ;;;string-object: formato para definir la cadena a imprimir.
+           ;;;stream salida del print-object
+           (defmethod print-object((obj ,class-name) stream)
+             (format stream ,(car string-obj)
+                     ,@(loop for slot in (cdr string-obj)
+                          collecting `(,slot obj))))))
+      #+END_SRC
+
+      #+RESULTS:
+      : CREATE-CLASS-DATA
+
+***** Ejemplo
+      #+BEGIN_EXAMPLE
+      ;;creando un humano con nombre, edad y otras propiedades
+      (create-class-data humano () () ("EL humano ~a tiene ~a annos" name age) (other name age) (other name age))
+      ;;creando un estudiante que hereda de humano y tiene documentacion.
+      (create-class-data estudiante "documentacion de estudiante" (humano) ("EL estudiante ~a tiene ~a annos" name age escuela) (escuela) (other name age escuela))
+      #+END_EXAMPLE
+      El orden en que se definan los slots es importante, la funcion contructora se crea con ese orden.
+** Macros Generadores
+*** gcode
+    Macro para definir los generadores de codigo de los nodos.
+**** Parametros 
+     :class-name: nombre del tipo de la clase a generar el codigo.
+     :language: lenguaje en el que se genere.
+     :format: codigo que se quiere generar.
+     :hands: slots de la clase que se quieren generar. El orden es relevante para la generacion de codigo
+**** Implementacion
+      #+BEGIN_SRC lisp -n -r :exports code :result output :tangle micro-core-org.lisp
+        (defmacro gcode (class-name language format hands)    
+          `(DEFMETHOD generate-code ((obj ,class-name) (lang ,language) stream)
+             (format stream ,format
+                     ,@(loop for hand in hands
+                          collect `(generate-code (,hand obj) lang nil)))))
+      #+END_SRC
+
+      #+RESULTS:
+      : GCODE
+     
+*** TODO create-methods... :arreglar:por:la:nueva:definicion:pero:parece:que:no:hace:falta:
+
+

@@ -1,0 +1,29 @@
+
+(load "myAdol-ast-language")
+(load "languages/load")
+(gcode variable-node T ("~a"))
+
+;;ver lo que quedo en generate-code.lisp de adol
+(defnode-instance (csharp () ()) (c))
+
+; built-in-type-bool-node
+;(gcode built-in-type-bool csharp ("bool"))
+
+(gcode self-node csharp ("this"))
+
+(gcode type-array-node csharp ("~a[]"))
+
+(gcode type-list-node csharp ("List<~a>"))
+
+(gcode  list-lenght-node csharp ("~a.Count"))
+
+(gcode type-void-node csharp ("void"))
+
+(gcode null-node csharp ("null"))
+
+(gcode true-node csharp ("true"))
+
+(gcode false-node csharp ("false"))
+
+
+(gcode library-node csharp ( "using System;~%using System.Collections.Generic;~%using System.Linq;~%using System.Text;~%~%namespace ~a" indent "~a" deindent) (name) (members))

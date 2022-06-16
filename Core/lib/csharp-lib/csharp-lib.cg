@@ -1,0 +1,34 @@
+;;--variable-declaration-csharp
+(gcode variable-declaration-csharp csharp-language  "~a ~a" (type-declaration name))
+
+;;--def-class
+(gcode def-class csharp-language "public class ~a~%{~a  ~a~%}" (name properties methods))
+
+;;--property class
+(gcode property-csharp csharp-language "public ~a ~a {get; set;}" (type-property name))
+
+;;--ctr class
+(defmethod generate-code ((obj  method-type-class)(lang csharp-language) stream)
+  (format stream "public ~a  ~a (~a) ~%{~%~a~%}"
+          (name obj)
+          (return-type obj)
+          (print-common-c-parameters (parameters obj) nil)
+          (generate-code (code obj) lang nil)))
+		  
+;;--invoke class
+(defmethod generate-code((obj invoke-class) (lang csharp-language) stream)
+  (format stream "new ~a(~a~{~a~})"
+	  (name obj)
+	  (car (properties obj))
+	  (loop for name-p in (cdr (properties obj))
+		collecting (concatenate 'string "," name-p))))
+
+		
+;--operator overload
+(defmethod generate-code((obj op-overload-csharp) (lang csharp-language) stream)
+  (format stream "public static ~a ~a ~a (~a) ~%{~%~a~%}"
+	  (return-type obj)
+	  (name obj)
+	  (operator-in obj)
+	  (print-common-c-parameters (parameters obj) nil)
+	  (generate-code (code obj) lang nil)))

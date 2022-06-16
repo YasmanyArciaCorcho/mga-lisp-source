@@ -1,0 +1,38 @@
+;;;;;{{{ Initial documentation
+;;;;{{{ History, TODO, and the like
+;;;{{{ History
+;;;
+;;;   2012-04-16
+;;;     - Added  underscore-language
+;;;      
+;;;   2012-04-16
+;;;     - Wrote the generate-code-for-symbols
+;;;
+;;;}}}
+;;;;}}}
+;;;;;}}}
+
+(in-package :adol*)
+
+;;;{{{ Language definition
+(defclass underscore-language ()
+  ()
+  (:documentation "A language with underscore language. Example: adol_star."))
+;;;}}}
+
+;;;{{{ Code generation
+
+(defmethod generate-code ((node symbol)
+                          (language underscore-language)
+                          stream indentation)
+  (declare (ignore indentation))
+  (let* ((symbol-string (string-downcase (symbol-name node)))
+         (underscored-string ""))
+     (loop for c across symbol-string
+            do (setf underscored-string
+                     (concat underscored-string
+                             (if (char-equal c #\-) "_" c))))
+    ;; return underscored-string
+    (format stream "~a" underscored-string)))
+
+;;;}}}

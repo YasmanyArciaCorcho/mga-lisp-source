@@ -1,0 +1,118 @@
+(defgeneric generate-code (node lang stream))
+
+(defmethod generate-code ((node t) lang stream)
+  (declare (ignore lang))
+  (format stream "~a" obj))
+
+;;--assignment-class  
+(gcode assignment-class  common-language "~a = ~a" (left-hand right-hand))
+(gcode assignment-class  lisp-language "(setf ~a ~a)" (left-hand right-hand))
+
+;;--sum-class
+(gcode sum-class common-language "~a + ~a" (left-hand right-hand))
+(gcode sum-class lisp-language "(+ ~a ~a)" (left-hand right-hand))
+
+
+;;--minus-class
+(gcode minus-class common-language "~a - ~a" (left-hand right-hand))
+(gcode minus-class lisp-language "(- ~a ~a)" (left-hand right-hand))
+
+;;--mult-class
+(gcode mult-class common-language "~a * ~a" (left-hand right-hand))
+(gcode mult-class lisp-language "(* ~a ~a)" (left-hand right-hand))
+
+;;--div-class
+(gcode div-class common-language "~a / ~a" (left-hand right-hand))
+(gcode div-class lisp-language "(/ ~a ~a)" (left-hand right-hand))
+
+;;--for-class
+(gcode for-class common-language "for(int ~a = ~a; ~a ; ~a){~a}" (var-name initial-value condition-slot evolution code))
+(gcode for-class lisp-language "(DO ((~a ~a ~a))((not ~a)) ~a)" (var-name initial-value condition-slot evolution code))
+
+;;--list-class
+(defmethod generate-code ((obj list) lang stream)
+  (let* ((list (mapcar (lambda (x) (with-output-to-string (s)
+                                     (generate-code x lang s)))
+                       obj)))
+    (format stream "~{~a~%~}"
+            list)))
+(defun process-list (list lang stream separator)
+  (let* ((format-string (format nil "~~{~~a~a~~}" separator)))
+    (format stream format-string
+            (mapcar (lambda (x) (generate-code x lang nil)) list))))
+
+;;-method-class
+(gcode div-class common-language "~a / ~a" (left-hand right-hand))
+(gcode div-class lisp-language "(/ ~a ~a)" (left-hand right-hand))
+
+;;todo:(como convertir de simbolo a string) acordar con lo nuevo de los macros si hago un macro para que el transpaso de los parametros no sea tan feo como es
+;;ahora con los string.
+;;ejemplo de parametros (("int" "edad") ("string" "nombre"))
+(defun print-common-c-parameters (parameters stream)
+  (format stream "~a ~{~a~}"(concatenate 'string (string (first (car parameters))) " " (string (second (car parameters))))
+          (loop for (type name) in (cdr parameters)
+             collecting (concatenate 'string "," (string type) " "  (string name)))))
+
+(defmethod generate-code((obj method-class) (lang common-c-language) stream)
+  (format stream "public void ~a (~a) ~%{~%~a~%}"
+          (name obj)
+          (print-common-c-parameters (parameters obj) nil)
+          (generate-code (code obj) lang nil)))
+
+(defmethod generate-code((obj method-type-class) (lang common-c-language) stream)
+  (format stream "public ~a ~a (~a) ~%{~%~a~%}"
+          (return-type obj)
+          (name obj)
+          (print-common-c-parameters (parameters obj) nil)
+          (generate-code (code obj) lang nil)))
+
+
+;;--return-class: indica el codigo que se quiere retornar.
+(gcode return-class common-language "return ~a" (code))
+;;-->ver que para lisp solo es salir del scope donde se encuentre.
+(gcode return-class lisp-language  "return ~a" (code))
+
+;;--propertiy-value: para acceder alguna propiedad o un metodo de una clase.
+;;ver si funciona con el nombre de la clase porque accedi directamente al nombre de la clase en la generacion
+;;de codigo original.
+(gcode property-value common-c-language "return ~a" (name-clase name))
+(gcode property-value lisp-language "(~a ~a)" (name name-clase))
+
+
+;;invoke-method: llamada a un metodo.
+(defmethod generate-code((obj method-invoke-class) (lang common-c-language) stream)
+  (format stream " ~a (~a~{~a~})"
+          (name obj)
+          (car (parameters obj))
+          (loop for name in (cdr (parameters obj))
+             collecting (concatenate 'string "," name))))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		

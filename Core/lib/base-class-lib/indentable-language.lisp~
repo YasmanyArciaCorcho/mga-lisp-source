@@ -1,0 +1,15 @@
+;; indent-symbol: simbolo que define la indentacion del lenguaje. por
+;; defecto es el espacio, todavia en esta version no se pueden poner valores por defecto a
+;; los simbolos
+
+;; amount: cantidad de veces que se repite el indent-symbol para la correcta indentacion
+;; del lenguaje
+(defnode indentable-language-language ()
+  (:documentation "An language indentable")
+  ((indent-increment :accessor ind-increment :initarg :ind-increment
+                  :initform 2
+                  :documentation "How many spaces to 
+                  add with each indentation increment")
+   (indentation :accessor indentation :initarg :indentation
+           :initform 0
+           :documentation "The current indentation for the language")))

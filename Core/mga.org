@@ -1,0 +1,272 @@
+* Requerimientos
+  1. Antes de cargar defnode-org.lisp es necesario haber cargado macro-core.lisp
+  2. Si no se tiene definida la funicion genereica "generate-code", cargar core-lib.lisp que esta en la carpeta core/lib
+  3. Conocer y tener dominio sobre el fichero macro-core.
+
+** Caga de ficheros viejos.
+   Por el momento debemos cargar macro-core.lisp
+   #+BEGIN_SRC emacs-lisp
+     (load "d:/Development/GeneratorMultiLanguage/Core/macro-core.lisp")
+   #+END_SRC
+   #+RESULTS:
+   =t=
+*  Libreria defnode
+   En esta libreria estan implementados los macros y funciones que brinda Multilan-G
+   para la generacion de DSL.
+   El orden de las funciones es para evitar warning cuando sea interpretado el .lisp
+** Datos generales
+*** pdict  
+    Una instancia del diccionario de propiedades
+**** Implementacion
+   #+BEGIN_SRC lisp -n -r :exports code :result output :tangle defnode-org.lisp
+        (defparameter pdict ())
+   #+END_SRC
+
+   #+RESULTS:
+   : PDICT
+
+*** update-dictionary-properties
+    LLamanda a la funcion declarada en macro-core insert-class-data.
+    Para mas informacion documentarse en macro-core.org.
+**** Implementacion
+     #+BEGIN_SRC lisp -n -r :exports code :result output :tangle defnode-org.lisp
+       (defun update-dictionary-properties (dict instruction-name inherit args)
+         (setf dict (insert-class-data dict instruction-name inherit args))
+         dict)
+     #+END_SRC
+
+     #+RESULTS:
+     : UPDATE-DICTIONARY-PROPERTIES
+
+*** print-object opciones
+    Por defecto se brinda un print-object, que recorre todos los slots de la clase
+    que se esta definiendo en el orden de su definicion.
+**** Ejemplo
+    #+BEGIN_EXAMPLE
+    ;;Supongamos que se creo una clase persona con nuestro sistema y 
+    ;;esta se intancia en persona1.
+    ;;Sea la clase persona con 2 slots nombre y edad.
+    (setf persona1 (persona "yasmany" 26))
+    ;;resultado del print-object por defecto
+     (persona (nombre "yasmany") (edad 36) )
+    #+END_EXAMPLE
+**** Modificar los parentisis
+      Los parentisis del prin-object pueden ser cambiados por cualquier string.
+     Para lograr esto se tienen dos variable que almacenan el string izquierdo(derecho)
+     que se usara al definir el print object.
+***** Variables identificadoras de los limitadores en la lista
+       #+BEGIN_SRC lisp -n -r :exports code :result output :tangle defnode-org.lisp
+         (defparameter print-object-left-key "(")
+         (defparameter print-object-right-key ")")
+       #+END_SRC
+
+       #+RESULTS:
+       : PRINT-OBJECT-RIGHT-KEY
+
+***** Funciones update-left-key y update-right-key
+     Estas funciones cambian los parentisis izquierdo(derecho) por el string deseado. 
+****** Implementacion
+      #+BEGIN_SRC lisp -n -r :exports code :result output :tangle defnode-org.lisp
+        (defun update-left-key (new-key)
+          (setf print-object-left-key new-key))
+        (defun update-right-key (new-key)
+          (setf print-object-right-key new-key))
+        (defun update-key (l-key r-key)
+          (updcate-left-key l-key)
+          (update-right-key r-key))
+      #+END_SRC
+
+      #+RESULTS:
+      : UPDATE-KEY
+
+       La funcion update-key modifica ambos limitadores simultaneamente.
+*** check-parameters-func
+     Esta funcion es para ayudar a la creacion de funciones.
+    y poder crear los parametros con simbolos,dandole a todos los simbolos que
+    aparecen el los parametros y son utilizados en el codigo de la funcion su propio valor.    
+**** Implementacion
+     #+BEGIN_SRC lisp -n -r :exports code :result output :tangle defnode-org.lisp
+       (defun chek-parameters-func(parameters code)
+         (let* ((result ()))
+           (loop for element in code
+              doing
+                (if
+                 (member element parameters)
+                 (setf result (append result (list(read-from-string (format nil "'~a" element)))))
+                 (if
+                  (atom element)
+                  (setf result (append result (list element)))
+                  (setf result (append result (list (chek-parameters-func parameters element)))))))
+           result))
+     #+END_SRC
+
+     #+RESULTS:
+     : CHEK-PARAMETERS-FUNC
+
+*** remove-type-to-type-parameters
+    En la funcion check-parameters-func la estructura de los parametros
+    no pueden ser parametros tipados,remove-type-to-type-parameters quita 
+    el tipo de los parametros convirtiendo la lista parameters en una declaracion
+    de parametros para un lenguaje con tipado dinamico.
+**** Implementacion y Ejemplo
+***** Implementacion
+  #+BEGIN_SRC lisp -n -r :exports code :result output :tangle defnode-org.lisp
+    (defun remove-type-to-type-parameters(parameters)
+      (loop for (type name) in parameters
+         collect  name))
+  #+END_SRC
+
+  #+RESULTS:
+  : REMOVE-TYPE-TO-TYPE-PARAMETERS
+
+***** Ejemplo
+      #+BEGIN_EXAMPLE
+      ;;Sea la lista de parametros a  = ((int a) (int b))
+      (remove-type-to-type-paramenters a)
+      (a b)
+      #+END_EXAMPLE
+*** normalize-code
+      El objetivo es detectar si la declaracion de los parametros de una funcion
+     es de tipado estatio o dinamico para convertir en caso que sea estatico a dinamico 
+     y aplicar luego la funcion chek-parameters-func
+**** Implementacion
+      #+BEGIN_SRC lisp -n -r :exports code :result output :tangle defnode-org.lisp
+        (defun normalize-code (parameters code)
+          (if (not (atom (car parameters)))
+              (setf parameters (remove-type-to-type-parameters parameters)))
+          (chek-parameters-func parameters code))
+      #+END_SRC
+
+      #+RESULTS:
+      : NORMALIZE-CODE
+     
+** Funciones y Macros Estadares
+*** standar-print-object
+    Brinda un formato por defecto para la generacion del print-object de todas las
+    clases que se esten definiendo en el sistema.
+**** Parametros
+    :name: nombre de la clase a definir su print-object.
+    :args: slots de la clase que queren ser mostrados en el print-object.
+    :separator: el separador que a utilizar entre todos los slots de la clase,por defecto es el espacio
+**** Implementacion
+      #+BEGIN_SRC lisp -n -r :exports code :result output :tangle defnode-org.lisp
+        (defun standard-print-object (name args separator funtion)
+          (let* ((format-string (format nil "~a ~a ~~{~~a~a~~} ~a" print-object-left-key name separator print-object-right-key)))
+            (format nil format-string
+                    (loop for arg in args
+                       collecting  (list arg funtion)))))
+      #+END_SRC
+
+      #+RESULTS:
+      : STANDARD-PRINT-OBJECT
+
+*** g-def-void-func
+    Esta funcion permite definir una funcion para generar funciones intrinsecas al DSL en desarrollo
+**** Requerimiento
+     Para utilizar esta funcion se tiene que tener cargada la libreria core-lib.lisp
+**** Algunos datos sobre la funcion
+     #+BEGIN_EXAMPLE
+     ;;crea una  funcion para crear funciones:
+     ;;por ejemplo (g-def-void-func defineFun).luego podemos hacer algo en nuestro lenguaje como (definefun suma (x y z) (+ x (+ y z)))
+     ;;ver que en la generacion de la funcion todos los nodos internos deben estar previamente definidos en el lenguaje para poder exportarlos.
+     ;;g-def-void-func solo es para funciones que no retornan.
+     ;; en csharp serian los metodos void,
+     ;; en python son metodos que no retornan
+     ;; en lisp como siempre se retorna algo hago incapie en que son funciones que no tienen un return o return-from en su cuerpo.
+     ;;alternativa y me gusta porque utilizo las clases basicas implementadas.
+     ;;no asustarme porque puedo recorrer los parametros aunqe sean simbolos normal.
+     #+END_EXAMPLE
+**** Implementacion y Ejemplo
+***** Implementacion
+       #+BEGIN_SRC lisp -n -r :exports code :result output :tangle defnode-org.lisp
+         (defmacro g-def-void-func (funtion-name)
+           `(defmacro ,funtion-name (name parameters code)
+              (setf code-aux (normalize-code parameters code))
+              `(method-class ',name ',parameters ,code-aux)))
+      #+END_SRC
+
+       #+RESULTS:
+       : G-DEF-VOID-FUNC
+
+***** Ejemplo
+      #+BEGIN_EXAMPLE
+      ;;primero definir el nombre con el cual se quieren definir funciones.
+      (generate-def-void-func-c def)
+      ;;indica que se quiere definir funciones con la funcion def 
+      ;;----------------------------------------------
+      ;;ejemplo de entrada con tipado estatico
+      (def suma ((int a)(int b)) (sum-class a b))
+      ;; ejemplo de entrada con tipado dinamico
+      (def suma ( a  b) (sum-class a b))
+      #+END_EXAMPLE
+** Macro defnode
+    Este macro es usado por el usuario par definir las nuevas clases.
+*** Parametros 
+    :instruction-name: nombre de la clase a definir (simbolo).
+    
+    :inherit:  lista de simbolos con los nombres de las clases bases.
+     : el 3er parametro del macro es una lista con el modificador key
+     : para todos sus elementos, estos seran mostrados a continuacion con la palabra
+     : clave key.
+    :key documentation: documentacion de la clase "string".
+    :key string-obj: formato del string a montar en el print-object de la clase.
+    es una lista de dos elementos ("string-ob" slots), donde el string es como se quiere que
+    mostrar el print-obj de la clase y los slots son los que se quieren mostrar.
+    :key ctr-type: tipo de la funcion constructora para la clase,por defecto es defun, otra
+    valor puede ser 'defmacro.
+    :key lambda-lis: lambda-list para la funcion(macro) que instancie la clase,por defecto
+    es una lista con todos los argumentos de la clase.
+    :key body: cuerpo para la funcion(macro) que instancia la clase por defecto
+    instancia la clase con todos los slots del lambda-list original.
+    :args:     slots de la clase que se esta definiendo. No se ponen los slots heredados.
+*** Implementacion y Ejemplo
+**** Implementacion
+       #+BEGIN_SRC lisp -n -r :exports code :result output :tangle defnode-org.lisp
+         (defmacro defnode (class-name inherit (&key (documentation "No any documentation for this node.")
+                                                     (ctr-type 'defun ctr-type-p)(lambda-list nil lambda-list-p) (ctr-body  nil ctr-body-p)
+                                                     (string-obj nil string-obj-p)) &rest args)
+           (setf pdict (update-dictionary-properties pdict class-name inherit args))
+           (let* ((all-args (Get-All-Slots-From-Class class-name pdict))
+                  ;;El comentario siguiente es valido solo para las variables que se definen a continuacion.         
+                  ;;Esta region del let* es solo para asignar valores por defecto a los parametros con el modificador &key activo.
+                  (ctr-type (if ctr-type-p
+                                'defmacro
+                                'defun))
+                  (parameters (if (not lambda-list-p)
+                                  all-args
+                                  lambda-list))
+                  (n-ctr-body (if (not ctr-body-p)
+                                  `(make-instance ',class-name ,@(loop for slot-name in all-args
+                                                                    collecting (make-keyword ":~a" slot-name)
+                                                                    collecting (make-keyword " ~a" slot-name)))
+                                  ctr-body))
+                  (n-string-obj (if (and string-obj-p
+                                         (not (eq nil string-obj)))
+                                    string-obj
+                                    (append (list (standard-print-object class-name all-args " "  "~a")) all-args))))
+             `(create-class-data ,class-name ,documentation ,inherit (,ctr-type ,class-name ,parameters ,n-ctr-body) ,n-string-obj ,args)))
+       #+END_SRC
+**** Ejemplo
+     #+BEGIN_EXAMPLE
+     ;; definiendo una clase simple
+     (defnode humano () (:documentation "doc humano") nombre edad)
+     ;;definiendo estudiante que hereda de humano
+     (defnode estudiante (humano) (:documentation "doc estudiante") curso)
+     ;;definiendo deporte
+     (defnode deporte () (:documentation "doc deportista" ) tipo_deporte)
+     ;;definiendo estudiante deportista
+     (defnode estu_deportista (estudiante deporte) (:documentation "estudiante deportista")  medallas_caribe)
+     ;; ejemplos utilizando otros slots.
+     ;;Un ejemplo a una llamada del nuevo defnode
+     ;;ver como hacer para si queremos las opciones por defecto no tener que poner la lista
+     ;;de keys vacia.
+     ;; otro ejemplo de estudiante que hereda de humano
+     ;;y define el print-obj
+     (defnode estudiante (humano) (:string-obj ("El estudiante ~a tiene ~a annos y estudia ~a" nombre edad carrera) carrera)
+     ;;importante: para fernando ---> por ahora debe de tener en cuanta el orden de los slots en la definicion
+     ;; porque se tendran en cuenta para el print-obj.
+     ;; otro ejemplo para mostrar como modificar el lambda-list:
+     (defnode assign () (:lambda-list (left &optinal right)) left right)
+     #+END_EXAMPLE
+     
+     

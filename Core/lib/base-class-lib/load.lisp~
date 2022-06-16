@@ -1,0 +1,8 @@
+;;Se tiene que tener cargado las librerias macro-core y defnode
+(load "defgeneric-code-generator.lisp")
+(load "arithmetician-operator-language.lisp")
+(load "context-limit-language.lisp")
+(load "indentable-language.lisp")
+(load "notation-language.lisp")
+(load "separator-instruction-language.lisp")
+(load "style-notation-language.lisp")

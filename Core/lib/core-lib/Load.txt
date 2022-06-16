@@ -1,0 +1,3 @@
+(load "D:/Development/GeneratorMultiLanguage/Core/lib/core-lib/core-lib.fn")
+(load "D:/Development/GeneratorMultiLanguage/Core/lib/core-lib/core-lib.cg")
+

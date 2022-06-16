@@ -1,0 +1,144 @@
+;; agregar la documentacion a la creacion de las clases
+(defnode language-with-arithmetic-operators ()
+  ()
+  ())
+
+(defnode infix-operator-language  (language-with-arithmetic-operators)
+  ()
+  (:documentation "language with-operador-operators"))
+
+(defnode common-language ()
+  ()
+  (:documentation "common-language"))
+
+(defnode common-c-language (common-language infix-operator-language)
+  ()
+  (:documentation "common-c-language"))
+
+(defnode java-language  (common-c-language)
+  ()
+  (:documentation "java-language"))
+
+(defnode lisp-language (prefix-operator-language)
+  ()
+  (:documentation "lisp-language"))
+
+;;----------------------------------------
+(defnode binary-op ()
+  ()
+  (:documentation "class with two arguments: left-hand and right-hand") left-hand right-hand)
+(defnode assignment-class (binary-op)
+  ()
+  (:documentation  "assignment-class class"))
+(defnode sum-class (binary-op)
+  ()
+  (:documentation  "sum-class"))
+(defnode minus-class (binary-op)
+  ()
+  (:documentation "minus-class"))
+(defnode mult-class (binary-op)
+  () (:documentation "mult-class"))
+(defnode div-class (binary-op)
+  () (:documentation "div-class"))
+
+(defnode statement-class ()
+  (code)
+  (:documentation "statement-class") )
+
+(defnode conditional-class (statement-class)
+  (condition-slot)
+  (:documentation "conditional-class")  )
+
+(defnode for-class (conditional-class)
+  (var-name initial-value evolution)
+  (:documentation "for-class") )
+
+(defnode while-class (conditional-class)
+  ()
+  (:documentation "while-class"))
+
+(defnode if-class (conditional-class)
+  ()
+  (:documentation  "if-class"))
+
+                                        ;Lenguajes en cuales los  metodos retornan.
+;;-->return-class: codigo que se desee retornar.
+(defnode return-class (statement-class)
+  ()
+  (:documentation  "class with return values:return-class: codigo que se desee retornar."))
+
+(defnode variable-declaration ()
+  ()
+  (:documentation "variable-declaration") )
+
+;;-->parameters: lista de tuplas (name type).
+(defclass method-class(statement-class)
+  ((name :accessor name :initarg :name)
+   (parameters :accessor parameters :initarg :parameters)))
+(defun method-class(name parameters code)
+  (make-instance 'method-class :name name :parameters parameters :code code))
+(defmethod print-object((obj method-class) stream)
+  (format stream "(method-class (name ~a) (parameters ~a) (code ~a))"
+          (name obj)
+          (parameters obj)
+          (code obj)))
+
+;;-->return-type: tipo de retorno del metodo. 
+(defnode method-type-class (method-class)
+  (return-type)
+  (:documentation "method-type-class:return-type: tipo de retorno del metodo.") ) 
+
+;;Para invocar(llamar,call) un metodo.
+;;-->nombre:nombre del metodo a invocar.
+;;-->parameters parametros para invocar el metodo.
+(defnode method-invoke-class (method-class)
+  ()
+  (:documentation "method-invoke-class:Para invocar(llamar,call) un metodo.nombre:nombre del metodo a invocar.
+parameters parametros para invocar el metodo."))
+
+;;Clase para definir la sobrecarga de los operadores en los lenguajes que lo soporten.
+;;-->operator-in:operador al cual se le realizara la sobrecarga.
+(defnode op-overload  ()
+  (operador)
+  (:documentation "Clase para definir la sobrecarga de los operadores en los lenguajes que lo soporten.
+operator-in:operador al cual se le realizara la sobrecarga.")  )
+
+;;Propiedades para las clases.
+;;-->name-property: nombre de la propiedad.
+(defnode property-lang  ()
+  (name_property)
+  (:documentation "Property-lang: name-property: nombre de la propiedad") )
+
+;;Definicion de una clase.
+;;--> properties: son las propiedades de las clases,deben de ser de tipo property-lang.
+(defnode def-class  ()
+  (name properties)
+  (:documentation "def-class: properties: son las propiedades de las clases,deben de ser de tipo property-lang.") )
+
+;;Clases con metodos incuidos
+;;-->properties: las propiedades de las clases,deben de ser de tipo property-lang.
+;;-->methods: metodos de la clase,deben de ser de tipo method-class.
+(defnode def-class-with-methods (def-class)
+  (methods)
+  (:documentation "properties: las propiedades de las clases,deben de ser de tipo property-lang.
+methods: metodos de la clase,deben de ser de tipo method-class.") ) 
+
+;;Una implementacion para los constructores de las clases
+;;-->los constructores son metodos que no retornan nada(method-class)
+;;-->(defclass ctr-def-class(method-class)())
+;;-->  (defun ctr-def-class(name-class parameters code)
+;;-->    (make-instance 'ctr-def-class :name name-class :parameters parameters :code code))
+
+;;Invoca la creacion de una clase.
+;;-->properties :lista de dos elementos (nombre-propiedad valor)
+(defnode invoke-class  (def-class)
+  (name properties)
+  (:documentation "properties :lista de dos elementos (nombre-propiedad valor)") )
+
+;;Acceder a las propiedades de las clases.
+;;-->name-class: nombre de la clase en la que se desea el valor de la propiedad.
+;;-->name:nombre de la propiedad en la que se desea conocer el valor.
+(defnode property-value (property-lang)
+  (name-class)
+  (:documentation "name-class: nombre de la clase en la que se desea el valor de la propiedad.
+name:nombre de la propiedad en la que se desea conocer el valor.") )
